@@ -2,6 +2,7 @@ package info.bitrich.xchangestream.bybit;
 
 import static org.knowm.xchange.bybit.BybitAdapters.adaptBybitOrderStatus;
 import static org.knowm.xchange.bybit.BybitAdapters.convertBybitSymbolToInstrument;
+import static org.knowm.xchange.bybit.BybitAdapters.convertToBybitSymbol;
 import static org.knowm.xchange.bybit.BybitAdapters.getOrderType;
 
 import dto.marketdata.BybitOrderbook;
@@ -11,11 +12,14 @@ import dto.trade.BybitComplexPositionChanges;
 import dto.trade.BybitOrderChangesResponse.BybitOrderChanges;
 import dto.trade.BybitOrderFlag;
 import dto.trade.BybitPositionChangesResponse.BybitPositionChanges;
+import dto.trade.BybitStreamBatchAmendOrdersPayload;
+import dto.trade.BybitStreamBatchAmendOrdersPayload.BybitStreamBatchAmendOrderPayload;
 import dto.trade.BybitTrade;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.knowm.xchange.bybit.dto.BybitCategory;
 import org.knowm.xchange.bybit.dto.trade.details.BybitTimeInForce;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
@@ -24,7 +28,6 @@ import org.knowm.xchange.dto.account.OpenPosition.Type;
 import org.knowm.xchange.dto.account.OpenPositions;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
-import org.knowm.xchange.dto.marketdata.Trade.Builder;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
@@ -59,7 +62,7 @@ public class BybitStreamAdapters {
     bybitTrades.forEach(
         bybitTrade ->
             trades.add(
-                new Builder()
+                Trade.builder()
                     .id(bybitTrade.getTradeId())
                     .instrument(instrument)
                     .originalAmount(bybitTrade.getTradeSize())
@@ -285,5 +288,28 @@ public class BybitStreamAdapters {
       result.add(orderChanges);
     }
     return result;
+  }
+
+
+  public static BybitStreamBatchAmendOrdersPayload adaptBatchAmendOrder(LimitOrder[] orders,  BybitCategory category) {
+    List<BybitStreamBatchAmendOrderPayload> ordersPayload = new ArrayList<>();
+    for(LimitOrder order:orders) {
+      ordersPayload.add(new BybitStreamBatchAmendOrderPayload(
+          convertToBybitSymbol(order.getInstrument()),
+          order.getId(),
+          order.getUserReference(),
+          null,
+          order.getOriginalAmount().toPlainString(),
+          order.getLimitPrice().toPlainString(),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null));
+    }
+    return new BybitStreamBatchAmendOrdersPayload(category, ordersPayload);
   }
 }

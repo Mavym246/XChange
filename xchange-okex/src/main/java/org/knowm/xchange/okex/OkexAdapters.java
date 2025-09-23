@@ -236,6 +236,7 @@ public class OkexAdapters {
         .clientOrderId(order.getUserReference())
         .orderType(OkexOrderType.market.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
+        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
         .build();
   }
 
@@ -294,6 +295,7 @@ public class OkexAdapters {
                     : OkexOrderType.limit.name())
         .amount(convertVolumeToContractSize(order, exchangeMetaData))
         .price(order.getLimitPrice().toPlainString())
+        .tradeQuoteCcy(order.getInstrument().getCounter().getCurrencyCode())
         .build();
   }
 
@@ -435,7 +437,20 @@ public class OkexAdapters {
   }
 
   public static String adaptInstrument(Instrument instrument) {
-    return instrument.toString().replace('/', '-');
+    if (instrument instanceof CurrencyPair) {
+      CurrencyPair pair = (CurrencyPair) instrument;
+      String base = pair.getBase().getCurrencyCode();
+      String counter = pair.getCounter().getCurrencyCode();
+      // Normalize stablecoin quotes
+      if ("USDT".equals(counter) || "USDC".equals(counter)) {
+        counter = "USD";
+      }
+
+      return base + "-" + counter;
+    } else {
+      // OKX expects DASH, not slash
+      return instrument.toString().replace("/", "-");
+    }
   }
 
   public static Trades adaptTrades(
@@ -445,7 +460,7 @@ public class OkexAdapters {
     okexTrades.forEach(
         okexTrade ->
             trades.add(
-                new Trade.Builder()
+                Trade.builder()
                     .id(okexTrade.getTradeId())
                     .instrument(instrument)
                     .originalAmount(
